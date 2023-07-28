@@ -1,0 +1,11 @@
+[package]
+authors = ["Johan Govers"]
+name = "osm-bpf-to-svg"
+version = "0.1.0"
+edition = "2021"
+readme = "readme.md"
+
+[dependencies]
+osmpbf = "0.2"
+anyhow = "1.0"
+rijksdriehoek = "0.1"
