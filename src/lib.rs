@@ -2,6 +2,7 @@ mod node_index;
 mod style;
 
 use anyhow::Result;
+use log::debug;
 use node_index::NodeIndex;
 use osmpbf::{Element, ElementReader};
 use std::collections::HashMap;
@@ -48,20 +49,70 @@ impl Display for Svg {
     }
 }
 
-pub fn doit(x_min: u32, x_max: u32, y_min: u32, y_max: u32) -> Result<()> {
-    let reader = ElementReader::from_path("gelderland-latest.osm.pbf")?;
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct SelectBox {
+    x: u32,
+    y: u32,
+    w: u32,
+    h: u32,
+}
+
+impl SelectBox {
+    pub fn new(x: u32, y: u32, w: u32, h: u32) -> SelectBox {
+        SelectBox { x, y, w, h }
+    }
+
+    pub fn x_min(&self) -> u32 {
+        self.x
+    }
+
+    pub fn y_min(&self) -> u32 {
+        self.y
+    }
+
+    pub fn x_max(&self) -> u32 {
+        self.x + self.w
+    }
+
+    pub fn y_max(&self) -> u32 {
+        self.y + self.h
+    }
+
+    /// width
+    pub fn w(&self) -> u32 {
+        self.w
+    }
+
+    /// height
+    pub fn h(&self) -> u32 {
+        self.h
+    }
+
+    /// return true if the coordinate is inside the box
+    pub fn is_inside(&self, x: u32, y: u32) -> bool {
+        x > self.x_min() && x < self.x_max() && y > self.y_min() && y < self.y_max()
+    }
+}
+
+pub fn doit(
+    select_box: SelectBox,
+    input_path: String,
+    output_path: String,
+    _style_path: Option<String>,
+) -> Result<()> {
+    let reader = ElementReader::from_path(&input_path)?;
 
     let node_index =
         reader.par_map_reduce(NodeIndex::convert, NodeIndex::new, NodeIndex::combine)?;
 
-    let node_index_select = node_index.filter(x_min, x_max, y_min, y_max);
+    let node_index_select = node_index.filter(&select_box);
 
-    let reader = ElementReader::from_path("gelderland-latest.osm.pbf")?;
+    let reader = ElementReader::from_path(&input_path)?;
 
     let style = Style::new();
 
     // Count the ways
-    let mut svg = reader.par_map_reduce(
+    let svg = reader.par_map_reduce(
         |element| match element {
             Element::Way(way) => {
                 if way.refs().any(|id| node_index_select.contains_key(id)) {
@@ -90,7 +141,7 @@ pub fn doit(x_min: u32, x_max: u32, y_min: u32, y_max: u32) -> Result<()> {
                     }
 
                     if svg.0.is_empty() {
-                        println!(
+                        debug!(
                             "Missing id:{} {} nodes:{}",
                             way.id(),
                             tags,
@@ -128,20 +179,26 @@ pub fn doit(x_min: u32, x_max: u32, y_min: u32, y_max: u32) -> Result<()> {
     //           .to_string(),
     //   ));
 
-    let mut output = std::fs::File::create("test.svg")?;
-    let width = x_max - x_min;
-    let height = y_max - y_min;
+    let mut output = std::fs::File::create(output_path)?;
+
     write!(
         output,
-        "<svg 
-  width=\"{width}\" 
-  height=\"{height}\" 
-  viewBox=\"{x_min} -{y_max} {width} {height}\" 
+        "<svg
+  width=\"{}\" 
+  height=\"{}\" 
+  viewBox=\"{} -{} {} {}\" 
   xmlns=\"http://www.w3.org/2000/svg\" 
   xmlns:xlink=\"http://www.w3.org/1999/xlink\" 
 >
-{svg} 
-</svg>\n"
+{} 
+</svg>\n",
+        select_box.w,
+        select_box.h,
+        select_box.x_min(),
+        select_box.y_max(),
+        select_box.w,
+        select_box.h,
+        svg
     )?;
     Ok(())
 }

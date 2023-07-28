@@ -1,3 +1,4 @@
+use log::debug;
 use std::collections::HashMap;
 
 type PrioStyleLine<'a> = (u32, &'a str);
@@ -131,7 +132,7 @@ impl Style<'_> {
             if let Some(&s) = map.get(value) {
                 Some(s)
             } else {
-                println!("Default for {}:{}", key, value);
+                debug!("use default for {}:{}", key, value);
                 Some(*default)
             }
         } else {

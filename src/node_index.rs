@@ -1,3 +1,4 @@
+use crate::SelectBox;
 use osmpbf::{Element, WayRefIter};
 use rijksdriehoek::wgs84_to_rijksdriehoek;
 use std::collections::HashMap;
@@ -18,11 +19,11 @@ impl NodeIndex {
         self
     }
 
-    pub fn filter(&self, x_min: u32, x_max: u32, y_min: u32, y_max: u32) -> NodeIndex {
+    pub fn filter(&self, select_box: &SelectBox) -> NodeIndex {
         let mut r = NodeIndex::new();
 
         for (&id, &(x, y)) in &self.0 {
-            if x > x_min && x < x_max && y > y_min && y < y_max {
+            if select_box.is_inside(x, y) {
                 r.0.insert(id, (x, y));
             }
         }
