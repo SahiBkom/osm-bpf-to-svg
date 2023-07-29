@@ -31,6 +31,14 @@ impl Svg {
         }
         self
     }
+
+    pub fn append_line(&mut self, prio: u32, svg_line: String) {
+        if let Some(e) = self.0.get_mut(&prio) {
+            e.push(svg_line);
+        } else {
+            self.0.insert(prio, vec![svg_line]);
+        }
+    }
 }
 
 impl Display for Svg {
@@ -112,7 +120,7 @@ pub fn doit(
     let style = Style::new();
 
     // Count the ways
-    let svg = reader.par_map_reduce(
+    let mut svg = reader.par_map_reduce(
         |element| match element {
             Element::Way(way) => {
                 if way.refs().any(|id| node_index_select.contains_key(id)) {
@@ -163,6 +171,34 @@ pub fn doit(
         Svg::new,
         Svg::combine,
     )?;
+
+    // grid
+
+    for x in (select_box.x_min()..select_box.x_max()).step_by(1000) {
+        svg.append_line(
+            1000,
+            format!(
+                r#"<line x1="{}" y1="-{}" x2="{}" y2="-{}" stroke="black" />"#,
+                x,
+                select_box.y_min(),
+                x,
+                select_box.y_max()
+            ),
+        );
+    }
+
+    for y in (select_box.y_min()..select_box.y_max()).step_by(1000) {
+        svg.append_line(
+            1000,
+            format!(
+                r#"<line x1="{}" y1="-{}" x2="{}" y2="-{}" stroke="black" />"#,
+                select_box.x_min(),
+                y,
+                select_box.x_max(),
+                y
+            ),
+        );
+    }
 
     // consuming to much resources
     //   svg = svg.combine(Svg::one(
