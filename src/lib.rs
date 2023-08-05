@@ -226,6 +226,7 @@ pub fn doit(
   xmlns=\"http://www.w3.org/2000/svg\" 
   xmlns:xlink=\"http://www.w3.org/1999/xlink\" 
 >
+{}
 {} 
 </svg>\n",
         select_box.w,
@@ -234,6 +235,7 @@ pub fn doit(
         select_box.y_max(),
         select_box.w,
         select_box.h,
+        style::defs_pattern(),
         svg
     )?;
     Ok(())
